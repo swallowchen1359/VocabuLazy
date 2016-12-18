@@ -7,20 +7,14 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 
 import wishcantw.vocabulazy.R;
+import wishcantw.vocabulazy.widget.EventDispatcher;
+import wishcantw.vocabulazy.activities.player.PlayerEventHandler;
 
 /**
  * @author Swallow Chen
  * @since 2016/1/17
  */
 public class PlayerPanelView extends LinearLayout {
-    /**
-     * OnPanelItemListener is the callback function when any of setting item is clicked
-     * */
-	public interface OnPanelItemClickListener{
-		void onOptionFavoriteClick();
-		void onOptionPlayClick();
-		void onOptionOptionClick();
-	}
 
 	private static final int VIEW_ICON_FAVORITE = R.id.action_player_favorite;
 	private static final int VIEW_ICON_PLAY = R.id.action_player_play;
@@ -38,7 +32,6 @@ public class PlayerPanelView extends LinearLayout {
     private ImageView mActionPlayIcon;
     private ImageView mActionOptionIcon;
 
-	private OnPanelItemClickListener mOnPanelItemClickListener;
     private int mCurrentIconState;
 
     public PlayerPanelView(Context context) {
@@ -61,13 +54,7 @@ public class PlayerPanelView extends LinearLayout {
         registerEventListener();
     }
 
-    /**
-     * Hook the callback function
-     * @param listener the callback function
-     * */
-    public void setOnPanelItemClickListener(OnPanelItemClickListener listener){
-        mOnPanelItemClickListener = listener;
-    }
+    /**------------------------------------ Public methods -------------------------------------**/
 
     /**
      * The api for controller to customized the icon's state
@@ -85,6 +72,8 @@ public class PlayerPanelView extends LinearLayout {
         }
     }
 
+    /**------------------------------------ Private methods ------------------------------------**/
+
     /**
      * Register all the child's event
      * */
@@ -92,9 +81,7 @@ public class PlayerPanelView extends LinearLayout {
         mActionFavoriteIcon.setOnClickListener(new OnClickListener(){
         	@Override
             public void onClick(View v) {
-                if(mOnPanelItemClickListener != null) {
-                    mOnPanelItemClickListener.onOptionFavoriteClick();
-                }
+                EventDispatcher.request(PlayerEventHandler.EVENT_PANEL_FAVORITE_CLICK);
             }
         });
         
@@ -108,17 +95,14 @@ public class PlayerPanelView extends LinearLayout {
                     mCurrentIconState = ICON_PLAY_STATE_STOP;
                 }
                 ((ImageView) v).setImageResource(ICON_PLAY_RES_ID[mCurrentIconState]);
-                if(mOnPanelItemClickListener != null) {
-                    mOnPanelItemClickListener.onOptionPlayClick();
-                }
+                EventDispatcher.request(PlayerEventHandler.EVENT_PANEL_PLAY_CLICK);
             }
         });
         
         mActionOptionIcon.setOnClickListener(new OnClickListener(){
         	@Override
             public void onClick(View v) {
-                if(mOnPanelItemClickListener != null)
-                    mOnPanelItemClickListener.onOptionOptionClick();
+                EventDispatcher.request(PlayerEventHandler.EVENT_PANEL_OPTION_CLICK);
             }
         });
     }

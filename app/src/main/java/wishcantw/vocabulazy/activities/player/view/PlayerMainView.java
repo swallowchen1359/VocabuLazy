@@ -19,6 +19,8 @@ import wishcantw.vocabulazy.widget.CustomPageChangeListener;
 import wishcantw.vocabulazy.widget.LinkedListPagerAdapter;
 import wishcantw.vocabulazy.widget.Infinite3View;
 import wishcantw.vocabulazy.widget.PopScrollView;
+import wishcantw.vocabulazy.widget.EventDispatcher;
+import wishcantw.vocabulazy.activities.player.PlayerEventHandler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,82 +32,10 @@ import java.util.LinkedList;
  */
 public class PlayerMainView extends Infinite3View {
 
-    /**
-     * OnPlayerScrollListener contains all event of PlayerMainView's child
-     * @see Infinite3View
-     * @see PopScrollView
-     * @see PlayerScrollView.PlayerDetailView
-     * */
-    public interface OnPlayerScrollListener {
-        /**
-         * The callback function when vertical scroll stopped
-         * @param index indicate which player item is in the center
-         * @param isViewTouchedDown the boolean is used to notify whether the move is caused by service or by user
-         * @see PopScrollView
-         * */
-        void onPlayerVerticalScrollStop(int index, boolean isViewTouchedDown);
-
-        /**
-         * The callback function when vertical scroll performing
-         * @see PopScrollView
-         * */
-        void onPlayerVerticalScrolling();
-
-        /**
-         * The callback function when horizontal scroll stopped
-         * @param isOrderChanged the boolean indicate whether really change the player page
-         * @param direction the direction indicate which page is going to switch to
-         * @param isViewTouchedDown the boolean is used to notify whether the move is caused by service or by user
-         * @see Infinite3View
-         * */
-        void onPlayerHorizontalScrollStop(boolean isOrderChanged, int direction, boolean isViewTouchedDown);
-
-        /**
-         * The callback function when horizontal scroll performing
-         * @see Infinite3View
-         * */
-        void onPlayerHorizontalScrolling();
-
-        /**
-         * The callback function when Player detail page scroll stopped
-         * @param index indicate the currently showing player detail page
-         * @param isViewTouchedDown indicate the move is caused by service or by user
-         * @see PlayerScrollView.PlayerDetailView
-         * */
-        void onDetailScrollStop(int index, boolean isViewTouchedDown);
-
-        /**
-         * The callback function when Player detail page scroll performing
-         * @see PlayerScrollView.PlayerDetailView
-         * */
-        void onDetailScrolling();
-    }
-
-    /**
-     * OnPlayerItemPreparedListener contains the event of Player Item states
-     * @see PopScrollView
-     * */
-    public interface OnPlayerItemPreparedListener {
-
-        /**
-         * The callback function when first Player item is prepared
-         * @see PopScrollView
-         * */
-        void onInitialItemPrepared();
-
-        /**
-         * The callback function when final Player item is prepared
-         * @see PopScrollView
-         * */
-        void onFinalItemPrepared();
-    }
-
     public static final String TAG = PlayerMainView.class.getSimpleName();
 
     private Context mContext;
     private PlayerScrollView mPlayerScrollView;
-    private static OnPlayerScrollListener mOnPlayerScrollListener;
-    private static OnPlayerItemPreparedListener mOnPlayerItemPreparedListener;
 
     private static boolean isViewTouchedDown = false;
     private static boolean isScrolling = false;
@@ -118,22 +48,24 @@ public class PlayerMainView extends Infinite3View {
         super(context, attrs);
         mContext = context;
         mPlayerScrollView = null;
+        registerEventListener();
+    }
+
+    private void registerEventListener() {
         setOnPageChangedListener(new OnPageChangedListener() {
             @Override
             public void onPageScrolled() {
-                if (mOnPlayerScrollListener != null && !isScrolling) {
-                    mOnPlayerScrollListener.onPlayerHorizontalScrolling();
+                if (!isScrolling) {
+                    EventDispatcher.request(PlayerEventHandler.EVENT_PAGE_SCROLL_ING);
                     isScrolling = true;
                 }
             }
 
             @Override
             public void onPageScrollStop(boolean isOrderChanged, int direction) {
-                if (mOnPlayerScrollListener != null) {
-                    mOnPlayerScrollListener.onPlayerHorizontalScrollStop(isOrderChanged, direction, isViewTouchedDown);
-                    isViewTouchedDown = false;
-                    isScrolling = false;
-                }
+                EventDispatcher.request(PlayerEventHandler.EVENT_PAGE_SCROLL_STOP, isOrderChanged, direction, isViewTouchedDown);
+                isViewTouchedDown = false;
+                isScrolling = false;
             }
 
             @Override
@@ -141,22 +73,6 @@ public class PlayerMainView extends Infinite3View {
 
             }
         });
-    }
-
-    /**
-     * Hook the callback function for handling Player scrolling event, including scrolling and scroll stop
-     * @param listener the implemented callback function
-     */
-    public void setOnPlayerScrollListener(OnPlayerScrollListener listener) {
-        mOnPlayerScrollListener = listener;
-    }
-
-    /**
-     * Hook the callback function for handling Player item preparing event, including first item prepared and final item prepared
-     * @param listener the implemented callback function
-     */
-    public void setOnPlayerItemPreparedListener(OnPlayerItemPreparedListener listener) {
-        mOnPlayerItemPreparedListener = listener;
     }
 
     /**
@@ -173,40 +89,6 @@ public class PlayerMainView extends Infinite3View {
                         PlayerScrollView.PLAYER_ITEM_LAYOUT_RES_ID, playerDataList,
                         PlayerScrollView.PLAYER_ITEM_CONTENT_FROM,
                         PlayerScrollView.PLAYER_ITEM_CONTENT_TO), initPosition);
-        mPlayerScrollView.setOnItemPreparedListener(new PopScrollView.OnPopItemPreparedListener() {
-            @Override
-            public void onInitialPopItemPrepared() {
-                if (mOnPlayerItemPreparedListener != null) {
-                    mOnPlayerItemPreparedListener.onInitialItemPrepared();
-                }
-            }
-
-            @Override
-            public void onFinalPopItemPrepared() {
-                if (mOnPlayerItemPreparedListener != null) {
-                    mOnPlayerItemPreparedListener.onFinalItemPrepared();
-                }
-            }
-        });
-
-        mPlayerScrollView.setOnPopScrollStoppedListener(new PopScrollView.OnPopScrollStoppedListener() {
-            @Override
-            public void onPopScrollStopped(int index) {
-                if (mOnPlayerScrollListener != null) {
-                    mOnPlayerScrollListener.onPlayerVerticalScrollStop(index, isViewTouchedDown);
-                    isViewTouchedDown = false;
-                    isScrolling = false;
-                }
-            }
-
-            @Override
-            public void onPopScrolling() {
-                if (mOnPlayerScrollListener != null && !isScrolling) {
-                    mOnPlayerScrollListener.onPlayerVerticalScrolling();
-                    isScrolling = true;
-                }
-            }
-        });
 
         refreshItem(CENTER_VIEW_INDEX, mPlayerScrollView);
     }
@@ -339,6 +221,42 @@ public class PlayerMainView extends Infinite3View {
             mPlayerDetailView.setAdapter(
                 mPlayerDetailView.getAdapter(
                     context, mPlayerDetailDataMap, PLAYER_ITEM_DETAIL_CONTENT_FROM, PLAYER_ITEM_DETAIL_LAYOUT_CONTENT_TO));
+            registerItemPreparedEventListener();
+            registerVerticalScrollEventListener();
+        }
+
+        private void registerItemPreparedEventListener() {
+            setOnItemPreparedListener(new OnPopItemPreparedListener() {
+                @Override
+                public void onInitialPopItemPrepared() {
+                    EventDispatcher.request(PlayerEventHandler.EVENT_ITEM_PREPARED_INIT);
+                }
+
+                @Override
+                public void onFinalPopItemPrepared() {
+                    EventDispatcher.request(PlayerEventHandler.EVENT_ITEM_PREPARED_LAST);
+                }
+            });
+        }
+
+        private void registerVerticalScrollEventListener() {
+            setOnPopScrollStoppedListener(new OnPopScrollStoppedListener() {
+                @Override
+                public void onPopScrollStopped(int index) {
+                    EventDispatcher.request(PlayerEventHandler.EVENT_VERTICAL_SCROLL_STOP, index, isViewTouchedDown);
+                    isViewTouchedDown = false;
+                    isScrolling = false;
+
+                }
+
+                @Override
+                public void onPopScrolling() {
+                    if (!isScrolling) {
+                        EventDispatcher.request(PlayerEventHandler.EVENT_VERTICAL_SCROLL_ING);
+                        isScrolling = true;
+                    }
+                }
+            });
         }
 
         @Override
@@ -529,11 +447,9 @@ public class PlayerMainView extends Infinite3View {
                         }
                     }
 
-                    if (mOnPlayerScrollListener != null) {
-                        mOnPlayerScrollListener.onDetailScrollStop(position, isViewTouchedDown);
-                        isViewTouchedDown = false;
-                        isScrolling = false;
-                    }
+                    EventDispatcher.request(PlayerEventHandler.EVENT_DETAIL_SCROLL_STOP, position, isViewTouchedDown);
+                    isViewTouchedDown = false;
+                    isScrolling = false;
                 }
             }
 
@@ -544,8 +460,8 @@ public class PlayerMainView extends Infinite3View {
                         isViewTouchedDown = true;
                         break;
                     case MotionEvent.ACTION_MOVE:
-                        if (mOnPlayerScrollListener != null && !isScrolling) {
-                            mOnPlayerScrollListener.onDetailScrolling();
+                        if (!isScrolling) {
+                            EventDispatcher.request(PlayerEventHandler.EVENT_DETAIL_SCROLL_ING);
                             isScrolling = true;
                         }
                         break;

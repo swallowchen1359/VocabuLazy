@@ -11,37 +11,32 @@ import android.widget.SeekBar;
 import android.widget.Switch;
 
 import wishcantw.vocabulazy.R;
-import wishcantw.vocabulazy.database.AppPreference;
 import wishcantw.vocabulazy.database.object.OptionSettings;
+import wishcantw.vocabulazy.activities.player.PlayerOptionEventHandler;
+import wishcantw.vocabulazy.utility.Logger;
+import wishcantw.vocabulazy.widget.EventDispatcher;
 
 /**
  * Created by SwallowChen on 11/18/16.
  */
 
 public class PlayerOptionView extends LinearLayout {
-    /**
-     * OnOptionChangedListener is the callback function when any of option, including tab, is changed
-     * */
-    public interface OnOptionChangedListener {
-        void onOptionChanged(int optionID, int mode, View v, int value);
-    }
 
     /**
      * OptionCallbackFunc is the set of all callback functions in option view
      */
     public interface OptionCallbackFunc {
         /**
-         * The callback function for user to indicate the value to be shown on seek bar
-         * @param seekBarIdx indicate which seek bar is ready to show the value
-         * @param i indicate the current value of seek bar
-         * @return the value to be shown on seek bar
+          * The callback function for user to indicate the value to be shown on seek bar
+          * @param seekBarIdx indicate which seek bar is ready to show the value
+          * @param i indicate the current value of seek bar
+          * @return the value to be shown on seek bar
          */
         int getBalloonVal(int seekBarIdx, int i);
-
         /**
          *
          */
-        void playPrank(int idx);
+        void playPrank(int count);
     }
 
     public static final int IDX_OPTION_MODE      = 0x0;
@@ -70,9 +65,8 @@ public class PlayerOptionView extends LinearLayout {
     private PlayerOptionSeekBarsView mPlayerOptionSeekBarsView;
     // play a prank if user keep pressing the sentence switch
     private EasterEggTask mEasterEggTask;
-
-    private OnOptionChangedListener mOnOptionChangedListener, mRestoreListener;
     private OptionCallbackFunc mOptionCallbackFunc;
+    private static boolean mContentIsInitializing;
 
     public PlayerOptionView(Context context) {
         this(context, null);
@@ -111,15 +105,6 @@ public class PlayerOptionView extends LinearLayout {
     }
 
     /**------------------------------------ public method ---------------------------------------**/
-
-    /**
-     * Hook the callback function
-     * @param listener the callback function
-     */
-    public void setOnOptionChangedListener(OnOptionChangedListener listener) {
-        mOnOptionChangedListener = listener;
-    }
-
     public void setOptionCallbackFunc(OptionCallbackFunc callbackFunc) {
         mOptionCallbackFunc = callbackFunc;
     }
@@ -135,7 +120,9 @@ public class PlayerOptionView extends LinearLayout {
         boolean sentenceEnable;
         int modeIdx, listOrderIdx, vocOrderIdx;
 
-        unregisterListener();
+        // unregisterListener();
+        mContentIsInitializing = true;
+
         sentenceEnable = option.isSentence();
         modeIdx = option.getMode();
         listOrderIdx = option.getListLoop();
@@ -156,8 +143,9 @@ public class PlayerOptionView extends LinearLayout {
         mPlayerOptionSeekBarsView.setSeekBarProgress(IDX_SEEK_BAR_SPEED, option.getSpeed());
         mPlayerOptionSeekBarsView.setSeekBarProgress(IDX_SEEK_BAR_PLAY_TIME, option.getPlayTime()-10);
 
+        mContentIsInitializing = false;
         // register back
-        restoreListener();
+        // restoreListener();
     }
 
     /**----------------------------------- private method ---------------------------------------**/
@@ -171,8 +159,8 @@ public class PlayerOptionView extends LinearLayout {
         mVoiceSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                if (mOnOptionChangedListener != null) {
-                    mOnOptionChangedListener.onOptionChanged(IDX_OPTION_VOICE, mModeRadioGroup.getCheckedRadioButtonId(), mVoiceSwitch, b ? 1 : 0);
+                if (!mContentIsInitializing) {
+                    EventDispatcher.request(PlayerOptionEventHandler.EVENT_OPTION_CHANGED, IDX_OPTION_VOICE, mModeRadioGroup.getCheckedRadioButtonId(), mVoiceSwitch, b ? 1 : 0);
                 }
             }
         });
@@ -180,8 +168,8 @@ public class PlayerOptionView extends LinearLayout {
         mSentenceSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                if (mOnOptionChangedListener != null) {
-                    mOnOptionChangedListener.onOptionChanged(IDX_OPTION_SENTENCE, mModeRadioGroup.getCheckedRadioButtonId(), mSentenceSwitch, b ? 1 : 0);
+                if (!mContentIsInitializing) {
+                    EventDispatcher.request(PlayerOptionEventHandler.EVENT_OPTION_CHANGED, IDX_OPTION_SENTENCE, mModeRadioGroup.getCheckedRadioButtonId(), mSentenceSwitch, b ? 1 : 0);
                 }
                 // create easter egg for mSentenceSwitch for currently not support sentence voice
                 if (b == true) {
@@ -196,8 +184,8 @@ public class PlayerOptionView extends LinearLayout {
         mModeRadioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(RadioGroup radioGroup, int i) {
-                if (mOnOptionChangedListener != null) {
-                    mOnOptionChangedListener.onOptionChanged(IDX_OPTION_MODE, i, mModeRadioGroup, i);
+                if (!mContentIsInitializing) {
+                    EventDispatcher.request(PlayerOptionEventHandler.EVENT_OPTION_CHANGED, IDX_OPTION_MODE, i, mModeRadioGroup, i);
                 }
             }
         });
@@ -205,8 +193,8 @@ public class PlayerOptionView extends LinearLayout {
         mListOrderRadioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(RadioGroup radioGroup, int i) {
-                if (mOnOptionChangedListener != null) {
-                    mOnOptionChangedListener.onOptionChanged(IDX_OPTION_REPEAT, mModeRadioGroup.getCheckedRadioButtonId(), mListOrderRadioGroup, i);
+                if (!mContentIsInitializing) {
+                    EventDispatcher.request(PlayerOptionEventHandler.EVENT_OPTION_CHANGED, IDX_OPTION_REPEAT, mModeRadioGroup.getCheckedRadioButtonId(), mListOrderRadioGroup, i);
                 }
             }
         });
@@ -214,8 +202,8 @@ public class PlayerOptionView extends LinearLayout {
         mVocOrderRadioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(RadioGroup radioGroup, int i) {
-                if (mOnOptionChangedListener != null) {
-                    mOnOptionChangedListener.onOptionChanged(IDX_OPTION_RANDOM, mModeRadioGroup.getCheckedRadioButtonId(), mVocOrderRadioGroup, i);
+                if (!mContentIsInitializing) {
+                    EventDispatcher.request(PlayerOptionEventHandler.EVENT_OPTION_CHANGED, IDX_OPTION_RANDOM, mModeRadioGroup.getCheckedRadioButtonId(), mVocOrderRadioGroup, i);
                 }
             }
         });
@@ -227,11 +215,11 @@ public class PlayerOptionView extends LinearLayout {
                     case IDX_SEEK_BAR_REPEAT:
                     case IDX_SEEK_BAR_SPEED:
                     case IDX_SEEK_BAR_PLAY_TIME:
-                        if (mOnOptionChangedListener != null) {
-                            // Because Seek bar idx is started from IDX_SEEK_BAR_REPEAT (FREQUENCY) (0)
-                            int startIdx = IDX_OPTION_FREQUENCY;
-                            int modeId = mModeRadioGroup.getCheckedRadioButtonId();
-                            mOnOptionChangedListener.onOptionChanged(startIdx + seekBarIdx, modeId, seekBar, i);
+                        // Because Seek bar idx is started from IDX_SEEK_BAR_REPEAT (FREQUENCY) (0)
+                        int startIdx = IDX_OPTION_FREQUENCY;
+                        int modeId = mModeRadioGroup.getCheckedRadioButtonId();
+                        if (!mContentIsInitializing) {
+                            EventDispatcher.request(PlayerOptionEventHandler.EVENT_OPTION_CHANGED, startIdx + seekBarIdx, modeId, seekBar, i);
                         }
                         break;
                     default:
@@ -243,21 +231,14 @@ public class PlayerOptionView extends LinearLayout {
         mPlayerOptionSeekBarsView.setBalloonCallbackFunc(new PlayerOptionSeekBarsView.BalloonCallbackFunc() {
             @Override
             public int getBalloonVal(int seekBarIdx, int i) {
-                if (mOptionCallbackFunc != null) {
-                    return mOptionCallbackFunc.getBalloonVal(seekBarIdx, i);
+                if (!mContentIsInitializing) {
+                    if (mOptionCallbackFunc != null) {
+                        return mOptionCallbackFunc.getBalloonVal(seekBarIdx, i);
+                    }
                 }
                 return i;
             }
         });
-    }
-
-    private void unregisterListener() {
-        mRestoreListener = mOnOptionChangedListener;
-        mOnOptionChangedListener = null;
-    }
-
-    private void restoreListener() {
-        mOnOptionChangedListener = mRestoreListener;
     }
 
     private void playPrank(int count) {

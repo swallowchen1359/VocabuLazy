@@ -15,18 +15,6 @@ import wishcantw.vocabulazy.widget.DialogViewNew;
 
 public class PlayerOptionDialogView extends DialogViewNew {
 
-    public interface PlayerOptionEventListener {
-        /**
-         * The callback function when any one of Option in PlayerOptionContent changed
-         * @param optionID indicate which option is changed by user
-         * @param mode indicate which mode is currently being changed
-         * @param v the changed view
-         * @param value left/right arrow of pickers
-         * @see PlayerOptionView
-         * */
-        void onPlayerOptionChanged(int optionID, int mode, View v, int value);
-    }
-
     public interface PlayerOptionCallbackFunc {
         /**
          * The callback function for user to indicate the value to be shown on seek bar
@@ -45,8 +33,6 @@ public class PlayerOptionDialogView extends DialogViewNew {
     private static final int VIEW_PLAYER_OPTION_VIEW_RES_ID = R.id.view_player_option;
 
     private PlayerOptionView mPlayerOptionView;
-
-    private PlayerOptionEventListener mPlayerOptionEventListener;
     private PlayerOptionCallbackFunc mPlayerOptionCallbackFunc;
 
     public PlayerOptionDialogView(Context context) {
@@ -67,10 +53,6 @@ public class PlayerOptionDialogView extends DialogViewNew {
 
     /**------------------------------------- public method --------------------------------------**/
 
-    public void setPlayerOptionEventListener(PlayerOptionEventListener listener) {
-        mPlayerOptionEventListener = listener;
-    }
-
     public void setPlayerOptionCallbackFunc(PlayerOptionCallbackFunc callbackFunc) {
         mPlayerOptionCallbackFunc = callbackFunc;
     }
@@ -87,14 +69,6 @@ public class PlayerOptionDialogView extends DialogViewNew {
     /**------------------------------------ private method --------------------------------------**/
 
     private void registerEventListener() {
-        mPlayerOptionView.setOnOptionChangedListener(new PlayerOptionView.OnOptionChangedListener() {
-            @Override
-            public void onOptionChanged(int optionID, int mode, View v, int value) {
-                if (mPlayerOptionEventListener != null) {
-                    mPlayerOptionEventListener.onPlayerOptionChanged(optionID, mode, v, value);
-                }
-            }
-        });
 
         mPlayerOptionView.setOptionCallbackFunc(new PlayerOptionView.OptionCallbackFunc() {
             @Override

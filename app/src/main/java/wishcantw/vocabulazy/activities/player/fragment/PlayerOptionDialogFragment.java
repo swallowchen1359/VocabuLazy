@@ -1,5 +1,6 @@
 package wishcantw.vocabulazy.activities.player.fragment;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -8,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import wishcantw.vocabulazy.R;
+import wishcantw.vocabulazy.activities.player.PlayerOptionEventHandler;
 import wishcantw.vocabulazy.audio.AudioService;
 import wishcantw.vocabulazy.database.AppPreference;
 import wishcantw.vocabulazy.database.object.OptionSettings;
@@ -15,13 +17,15 @@ import wishcantw.vocabulazy.activities.player.activity.PlayerActivity;
 import wishcantw.vocabulazy.activities.player.model.PlayerModel;
 import wishcantw.vocabulazy.activities.player.view.PlayerOptionDialogView;
 import wishcantw.vocabulazy.activities.player.view.PlayerOptionView;
+import wishcantw.vocabulazy.utility.Logger;
 import wishcantw.vocabulazy.widget.DialogFragmentNew;
+import wishcantw.vocabulazy.widget.EventDispatcher;
 
 /**
  * Created by SwallowChen on 11/21/16.
  */
 
-public class PlayerOptionDialogFragment extends DialogFragmentNew implements PlayerOptionDialogView.PlayerOptionEventListener,
+public class PlayerOptionDialogFragment extends DialogFragmentNew implements PlayerOptionEventHandler,
                                                                              PlayerOptionDialogView.PlayerOptionCallbackFunc {
 
     public interface OnPlayPrankListener {
@@ -32,6 +36,8 @@ public class PlayerOptionDialogFragment extends DialogFragmentNew implements Pla
 
     // views
     private PlayerOptionDialogView mPlayerOptionDialogView;
+
+    private Context mContext;
 
     // Model
     private PlayerModel mPlayerModel;
@@ -47,7 +53,7 @@ public class PlayerOptionDialogFragment extends DialogFragmentNew implements Pla
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         mPlayerOptionDialogView = (PlayerOptionDialogView) inflater.inflate(LAYOUT_RES_ID, container, false);
-        mPlayerOptionDialogView.setPlayerOptionEventListener(this);
+        EventDispatcher.registerEventHandler(EVENT_OPTION_CHANGED, this);
         mPlayerOptionDialogView.setPlayerOptionCallbackFunc(this);
         return mPlayerOptionDialogView;
     }
@@ -55,7 +61,7 @@ public class PlayerOptionDialogFragment extends DialogFragmentNew implements Pla
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        mPlayerModel = ((PlayerActivity) getActivity()).getPlayerModel();
+        mPlayerModel = ((PlayerActivity) mContext).getPlayerModel();
 
         OptionSettings optionSettings = mPlayerModel.getPlayerOptionSettings();
 
@@ -64,6 +70,12 @@ public class PlayerOptionDialogFragment extends DialogFragmentNew implements Pla
                 true,
                 (AppPreference.getInstance().getPlayerVolume() == 1.0f)
         );
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        mContext = context;
     }
 
     @Override
@@ -76,11 +88,10 @@ public class PlayerOptionDialogFragment extends DialogFragmentNew implements Pla
         mOnPlayPrankListener = listener;
     }
 
-    /**--------------------- PlayerOptionDialogView.PlayerOptionEventListener -------------------**/
+    /**---------------------------- Implement PlayerOptionEventHandler --------------------------**/
 
     @Override
-    public void onPlayerOptionChanged(int optionID, int mode, View v, int value) {
-
+    public void onOptionChanged(int optionID, int mode, View v, int value) {
         if (optionID == PlayerOptionView.IDX_OPTION_MODE) {
             // The value is the mode option index that is selected
             AppPreference.getInstance().setPlayerOptionMode(value);
@@ -94,9 +105,21 @@ public class PlayerOptionDialogFragment extends DialogFragmentNew implements Pla
         // Refresh option settings
         mPlayerModel.updateOptionSettings(optionID, mode, v, value);
 
-        Intent intent = new Intent(getActivity(), AudioService.class);
+        Intent intent = new Intent(mContext, AudioService.class);
         intent.setAction(AudioService.OPTION_SETTINGS_CHANGED);
-        getActivity().startService(intent);
+        mContext.startService(intent);
+    }
+
+    @Override
+    public void execute(int eventID, Object... args) {
+        Logger.d("PlayerOptionDialogFragment", "execute " + eventID);
+        switch (eventID) {
+            case EVENT_OPTION_CHANGED:
+                onOptionChanged((int) args[0], (int) args[1], (View) args[2], (int) args[3]);
+                break;
+            default:
+                break;
+        }
     }
 
     /**--------------------- PlayerOptionDialogView.PlayerOptionCallbackFunc --------------------**/

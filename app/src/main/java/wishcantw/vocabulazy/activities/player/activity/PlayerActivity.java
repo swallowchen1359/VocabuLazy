@@ -94,6 +94,7 @@ public class PlayerActivity extends ParentActivity implements PlayerFragment.OnP
             playerVocTooLessDialogFragment.setOnExamAlertDoneListener(this);
 
         } else if (fragment instanceof PlayerOptionDialogFragment) {
+            Logger.d("PlayerActivity", "OptionDialog attach");
             PlayerOptionDialogFragment playerOptionDialogFragment = (PlayerOptionDialogFragment) fragment;
             playerOptionDialogFragment.setOnPlayPrankListener(this);
         } else if (fragment instanceof PlayerPrankDialogFragment) {

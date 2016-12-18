@@ -30,6 +30,8 @@ import wishcantw.vocabulazy.database.object.OptionSettings;
 import wishcantw.vocabulazy.database.object.Vocabulary;
 import wishcantw.vocabulazy.utility.Logger;
 import wishcantw.vocabulazy.widget.Infinite3View;
+import wishcantw.vocabulazy.widget.EventDispatcher;
+import wishcantw.vocabulazy.activities.player.PlayerEventHandler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,8 +44,8 @@ import java.util.LinkedList;
  * Use the {@link PlayerFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class PlayerFragment extends GABaseFragment implements PlayerView.PlayerEventListener,
-        PlayerModelDataProcessListener {
+public class PlayerFragment extends GABaseFragment implements PlayerModelDataProcessListener,
+                                                              PlayerEventHandler {
 
     // callback interface
     public interface OnPlayerLessonChangeListener {
@@ -106,8 +108,19 @@ public class PlayerFragment extends GABaseFragment implements PlayerView.PlayerE
         /** move listener setting into onCreate() */
         if (mPlayerView == null) {
             mPlayerView = (PlayerView) inflater.inflate(R.layout.view_player, container, false);
-            mPlayerView.setPlayerEventListener(this);
         }
+
+        EventDispatcher.registerEventHandler(PlayerEventHandler.EVENT_VERTICAL_SCROLL_ING, this);
+        EventDispatcher.registerEventHandler(PlayerEventHandler.EVENT_VERTICAL_SCROLL_STOP, this);
+        EventDispatcher.registerEventHandler(PlayerEventHandler.EVENT_PAGE_SCROLL_ING, this);
+        EventDispatcher.registerEventHandler(PlayerEventHandler.EVENT_PAGE_SCROLL_STOP, this);
+        EventDispatcher.registerEventHandler(PlayerEventHandler.EVENT_DETAIL_SCROLL_ING, this);
+        EventDispatcher.registerEventHandler(PlayerEventHandler.EVENT_DETAIL_SCROLL_STOP, this);
+        EventDispatcher.registerEventHandler(PlayerEventHandler.EVENT_ITEM_PREPARED_INIT, this);
+        EventDispatcher.registerEventHandler(PlayerEventHandler.EVENT_ITEM_PREPARED_LAST, this);
+        EventDispatcher.registerEventHandler(PlayerEventHandler.EVENT_PANEL_FAVORITE_CLICK, this);
+        EventDispatcher.registerEventHandler(PlayerEventHandler.EVENT_PANEL_PLAY_CLICK, this);
+        EventDispatcher.registerEventHandler(PlayerEventHandler.EVENT_PANEL_OPTION_CLICK, this);
 
         return mPlayerView;
     }
@@ -230,7 +243,54 @@ public class PlayerFragment extends GABaseFragment implements PlayerView.PlayerE
         }
     }
 
-    /**------------------------ Implement PlayerView.PlayerEventListener ------------------------**/
+    /**------------------------------ Implement PlayerEventHandler ------------------------------**/
+    @Override
+    public void execute(int eventID, Object ... args) {
+        Logger.d("PlayerFragment", "execute eventID" + eventID);
+        switch (eventID) {
+            case EVENT_VERTICAL_SCROLL_ING:
+                onPlayerVerticalScrolling();
+                break;
+            case EVENT_VERTICAL_SCROLL_STOP:
+                onPlayerVerticalScrollStop((int) args[0], (boolean) args[1]);
+                break;
+            case EVENT_PAGE_SCROLL_ING:
+                onPlayerPageScrolling();
+                break;
+            case EVENT_PAGE_SCROLL_STOP:
+                onPlayerPageScrollStop((boolean) args[0], (int) args[1], (boolean) args[2]);
+                break;
+            case EVENT_DETAIL_SCROLL_ING:
+                onPlayerDetailScrolling();
+                break;
+            case EVENT_DETAIL_SCROLL_STOP:
+                onPlayerDetailScrollStop((int) args[0], (boolean) args[1]);
+                break;
+            case EVENT_ITEM_PREPARED_INIT:
+                onPlayerInitialItemPrepared();
+                break;
+            case EVENT_ITEM_PREPARED_LAST:
+                onPlayerFinalItemPrepared();
+                break;
+            case EVENT_PANEL_FAVORITE_CLICK:
+                onPlayerPanelFavoriteClick();
+                break;
+            case EVENT_PANEL_PLAY_CLICK:
+                onPlayerPanelPlayClick();
+                break;
+            case EVENT_PANEL_OPTION_CLICK:
+                onPlayerPanelOptionClick();
+                break;
+            default:
+                break;
+        }
+    }
+
+    @Override
+    public void onPlayerVerticalScrolling() {
+        playerViewScrolling();
+    }
+
     @Override
     public void onPlayerVerticalScrollStop(int currentPosition, boolean isViewTouchedDown) {
         Logger.d("PlayerFragment", "player vertical scroll stop");
@@ -252,13 +312,14 @@ public class PlayerFragment extends GABaseFragment implements PlayerView.PlayerE
     }
 
     @Override
-    public void onPlayerVerticalScrolling() {
+    public void onPlayerPageScrolling() {
         playerViewScrolling();
     }
 
     @Override
-    public void onPlayerHorizontalScrollStop(boolean isOrderChanged, int direction, boolean isViewTouchedDown) {
+    public void onPlayerPageScrollStop(boolean isOrderChanged, int direction, boolean isViewTouchedDown) {
 
+        Logger.d("PlayerFragment", "PlayerPageScrollStop " + isOrderChanged + " " + isViewTouchedDown);
         // TODO: 2016/12/5 if tapping on item will trigger this event, and since the order hasn't changed, the player plays the item over again.
         // if the order of Infinite3View has not changed, the player should remain the same
         if (!isOrderChanged) {
@@ -289,6 +350,7 @@ public class PlayerFragment extends GABaseFragment implements PlayerView.PlayerE
             // remove old playerview
             mPlayerView.removeOldPlayer(direction == Infinite3View.MOVE_TO_RIGHT ? Infinite3View.RIGHT_VIEW_INDEX : Infinite3View.LEFT_VIEW_INDEX);
 
+            Logger.d("PlayerFragment", "newLessonIndex " + newLessonIndex);
             // notify that the lesson has been changed
             mOnPlayerLessonChangeListener.onLessonChange(newLessonIndex);
 
@@ -317,7 +379,7 @@ public class PlayerFragment extends GABaseFragment implements PlayerView.PlayerE
     }
 
     @Override
-    public void onPlayerHorizontalScrolling() {
+    public void onPlayerDetailScrolling() {
         playerViewScrolling();
     }
 
@@ -326,11 +388,6 @@ public class PlayerFragment extends GABaseFragment implements PlayerView.PlayerE
         if (isViewTouchedDown) {
             newSentenceFocused(index);
         }
-    }
-
-    @Override
-    public void onPlayerDetailScrolling() {
-        playerViewScrolling();
     }
 
     @Override
